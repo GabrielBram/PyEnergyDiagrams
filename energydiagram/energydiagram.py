@@ -30,6 +30,7 @@ class ED:
         self.offset_ratio = 0.02
         self.color_bottom_text = 'blue'
         self.color_top_text = 'k'
+        self.arrow_text_color = 'blue'
         self.aspect = aspect
         self.round_energies_at_digit = "keep all digits"
         self.top_text_fontsize = "medium"
@@ -44,6 +45,7 @@ class ED:
         self.bottom_texts = []
         self.left_texts = []
         self.right_texts = []
+        self.level_bbox = []
         self.links = []
         self.arrows = []
         self.electons_boxes = []
@@ -53,7 +55,8 @@ class ED:
         self.ax = None
 
     def add_level(self, energy, bottom_text='', position=None,
-                  top_text=None, right_text='', left_text='', color='k', linewidth=2, **kwargs):
+                  top_text=None, right_text='', left_text='', color='k', linewidth=2,
+                  bbox=None, **kwargs):
         '''
         Method of ED class
         This method add a new energy level to the plot.
@@ -116,6 +119,7 @@ class ED:
         self.bottom_texts.append(bottom_text)
         self.left_texts.append(left_text)
         self.right_texts.append(right_text)
+        self.level_bbox.append(bbox)
         kwargs['color'] = color
         kwargs['linewidth'] = linewidth
         self.level_kwargs.append(kwargs)
@@ -123,7 +127,7 @@ class ED:
         self.links.append([])
         self.arrows.append([])
 
-    def add_arrow(self, start_level_id, end_level_id, position='center', text=None, **kwargs):
+    def add_arrow(self, start_level_id, end_level_id, level_position=None, position='center', text=None, **kwargs):
         '''
         Method of ED class
         Add a arrow between two energy levels using IDs of the level. Use
@@ -141,7 +145,7 @@ class ED:
         Append arrow to self.arrows
 
         '''
-        self.arrows[start_level_id].append((end_level_id, position, text, kwargs))
+        self.arrows[start_level_id].append((end_level_id, level_position, position, text, kwargs))
 
     def add_link(self, start_level_id, end_level_id, line_order=1, color='k', ls='dashed', lw=1.0, **kwargs):
         '''
@@ -202,17 +206,19 @@ class ED:
         y = self.energies[level_id]
         self.electons_boxes.append((x, y, boxes, electrons, side, spacing_f))
 
-    def plot_level(self, energy, pos, btext, ttext, rtext, ltext, **kwargs):
+    def plot_level(self, energy, pos, btext, ttext, rtext, ltext, level_bbox, **kwargs):
         start = pos * (self.dimension + self.space)
         self.ax.hlines(energy, start, start + self.dimension, **kwargs)
         # top text
+        
         self.ax.text(start + 0.5 * self.dimension,  # X
                      energy + self.offset,  # Y
                      ttext,  # self.top_texts
                      horizontalalignment='center',
                      verticalalignment='bottom',
                      color=self.color_top_text,
-                     fontsize=self.top_text_fontsize)
+                     fontsize=self.top_text_fontsize,
+                     bbox=level_bbox,)
         # bottom text
         self.ax.text(start + self.dimension,  # X
                      energy,  # Y
@@ -220,7 +226,8 @@ class ED:
                      horizontalalignment='left',
                      verticalalignment='center',
                      color=self.color_bottom_text,
-                     fontsize=self.left_text_fontsize)
+                     fontsize=self.left_text_fontsize,
+                     bbox=level_bbox,)
         # right text
         self.ax.text(start,  # X
                      energy,  # Y
@@ -228,7 +235,8 @@ class ED:
                      horizontalalignment='right',
                      verticalalignment='center',
                      color=self.color_bottom_text,
-                     fontsize=self.right_text_fontsize)
+                     fontsize=self.right_text_fontsize,
+                     bbox=level_bbox,)
         # left text
         self.ax.text(start + 0.5 * self.dimension,  # X
                      energy - 2 * self.offset,  # Y
@@ -236,7 +244,8 @@ class ED:
                      horizontalalignment='center',
                      verticalalignment='top',
                      color=self.color_bottom_text,
-                     fontsize=self.bottom_text_fontsize)
+                     fontsize=self.bottom_text_fontsize,
+                     bbox=level_bbox,)
 
     def plot_link(self, idx, idy, **kwargs):
         # i is a tuple: (end_level_id,ls,linewidth,color)
@@ -270,8 +279,11 @@ class ED:
         else:
             raise NotImplementedError
 
-    def plot_arrow(self, idx, idy, position, text, **kwargs):
-        start = self.positions[idx] * (self.dimension + self.space)
+    def plot_arrow(self, idx, idy, level_position, position, text, **kwargs):
+        if level_position is None:
+            start = self.positions[idx] * (self.dimension + self.space)
+        else:
+            start = self.positions[level_position] * (self.dimension + self.space)
         x_arrow = start + 0.5 * self.dimension
         x_text = x_arrow
         y1 = self.energies[idx]
@@ -293,7 +305,7 @@ class ED:
                       'mutation_scale': arrow_width,
                       'color': 'green',
                       }
-        bbox = {'boxstyle': 'round',
+        bbox = {'boxstyle': 'Sawtooth',
                 'fc': 'white',
                 'color': 'green',
                 }
@@ -304,13 +316,11 @@ class ED:
         if position == 'center':
             ha = 'center'
         elif position == 'right':
-            arrowprops['arrowstyle'] = '|-|'
             arrowprops['mutation_scale'] *= 0.2
             x_arrow += 0.5 * self.dimension + 0.2 * self.space
             x_text += 0.5 * self.dimension + 0.5 * self.space
             ha = 'left'
         elif position == 'left':
-            arrowprops['arrowstyle'] = '|-|'
             arrowprops['mutation_scale'] *= 0.2
             x_arrow -= 0.5 * self.dimension + 0.2 * self.space
             x_text -= 0.5 * self.dimension + 0.5 * self.space
@@ -321,24 +331,51 @@ class ED:
         # double arrow
         self.ax.annotate("", xy=(x_arrow, y1), xytext=(x_arrow, y2), arrowprops=arrowprops)
         # text
-        self.ax.text(x_text, middle, text, bbox=bbox, va='center', ha=ha)
+        self.ax.text(x_text, middle, text, fontsize=self.left_text_fontsize, bbox=bbox, va='center', ha=ha, color=self.arrow_text_color)
 
         # draw supporting line if levels are offset
         line_kwargs = {'color': 'green',
                        'linestyle': '--'}
         line_kwargs.update({key: kwargs[key] for key in kwargs if key in line_kwargs})
-        p1 = self.positions[idx]
-        p2 = self.positions[idy]
-        if p1 > p2:
-            x2 = p2 * (self.dimension + self.space) + self.dimension
-            x1 = p1 * (self.dimension + self.space) + self.dimension
-            line = Line2D([x1, x2], [y2, y2], **line_kwargs)
-            self.ax.add_line(line)
-        elif p2 > p1:
-            x2 = p2 * (self.dimension + self.space)
-            x1 = p1 * (self.dimension + self.space)
-            line = Line2D([x1, x2], [y2, y2], **line_kwargs)
-            self.ax.add_line(line)
+        if level_position is None:
+            p1 = self.positions[idx]
+            p2 = self.positions[idy]
+            if p1 > p2:
+                x2 = p2 * (self.dimension + self.space) + self.dimension
+                x1 = p1 * (self.dimension + self.space) + self.dimension
+                line = Line2D([x1, x2], [y2, y2], **line_kwargs)
+                self.ax.add_line(line)
+            elif p2 > p1:
+                x2 = p2 * (self.dimension + self.space)
+                x1 = p1 * (self.dimension + self.space)
+                line = Line2D([x1, x2], [y2, y2], **line_kwargs)
+                self.ax.add_line(line)
+
+        else:
+            p1 = self.positions[idx]
+            p2 = self.positions[idy]
+            p3 = self.positions[level_position]
+            if p1 > p3:
+                x2 = p1 * (self.dimension + self.space)
+                x1 = p3 * (self.dimension + self.space)
+                line = Line2D([x1, x2], [y1, y1], **line_kwargs)
+                self.ax.add_line(line)
+            elif p1 < p3:
+                x2 = p3 * (self.dimension + self.space) + self.dimension
+                x1 = p1 * (self.dimension + self.space) + self.dimension
+                line = Line2D([x1, x2], [y1, y1], **line_kwargs)
+                self.ax.add_line(line)
+            if p2 > p3:
+                x2 = p2 * (self.dimension + self.space)
+                x1 = p3 * (self.dimension + self.space)
+                line = Line2D([x1, x2], [y2, y2], **line_kwargs)
+                self.ax.add_line(line)
+            elif p2 < p3:
+                x2 = p3 * (self.dimension + self.space) + self.dimension
+                x1 = p2 * (self.dimension + self.space) + self.dimension
+                line = Line2D([x1, x2], [y2, y2], **line_kwargs)
+                self.ax.add_line(line)
+
 
     def plot(self, show_IDs=False, ylabel="Energy / $kcal$ $mol^{-1}$", ax: plt.Axes = None):
         '''
@@ -395,10 +432,16 @@ class ED:
                    self.top_texts,  # 3
                    self.right_texts,  # 5
                    self.left_texts,  # 6
-                   self.level_kwargs)  # 7
+                   self.level_bbox, # 7
+                   self.level_kwargs)  # 8
 
-        for energy, pos, btext, ttext, rtext, ltext, kwargs in data:
-            self.plot_level(energy, pos, btext, ttext, rtext, ltext, **kwargs)
+        for idx, arrow in enumerate(self.arrows):
+            # x1, x2   y1, y2
+            for idy, level_position, position, text, kwargs in arrow:
+                self.plot_arrow(idx, idy, level_position, position, text, **kwargs)
+
+        for energy, pos, btext, ttext, rtext, ltext, level_bbox, kwargs in data:
+            self.plot_level(energy, pos, btext, ttext, rtext, ltext, level_bbox, **kwargs)
 
         if show_IDs:
             # for showing the ID allowing the user to identify the level
@@ -407,10 +450,6 @@ class ED:
                 self.ax.text(start, level[0]+self.offset, str(ind),
                              horizontalalignment='right', color='red')
 
-        for idx, arrow in enumerate(self.arrows):
-            # x1, x2   y1, y2
-            for idy, position, text, kwargs in arrow:
-                self.plot_arrow(idx, idy, position, text, **kwargs)
 
         for idx, link in enumerate(self.links):
             # here we connect the levels with the links
