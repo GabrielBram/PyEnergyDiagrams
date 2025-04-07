@@ -316,12 +316,12 @@ class ED:
         if position == 'center':
             ha = 'center'
         elif position == 'right':
-            arrowprops['mutation_scale'] *= 0.2
+            #arrowprops['mutation_scale'] *= 0.2
             x_arrow += 0.5 * self.dimension + 0.2 * self.space
             x_text += 0.5 * self.dimension + 0.5 * self.space
             ha = 'left'
         elif position == 'left':
-            arrowprops['mutation_scale'] *= 0.2
+            #arrowprops['mutation_scale'] *= 0.2
             x_arrow -= 0.5 * self.dimension + 0.2 * self.space
             x_text -= 0.5 * self.dimension + 0.5 * self.space
             ha = 'right'
@@ -355,24 +355,30 @@ class ED:
             p1 = self.positions[idx]
             p2 = self.positions[idy]
             p3 = self.positions[level_position]
+            if position == "left":
+                offset = -self.dimension
+            elif position == "right":
+                offset = self.dimension
+            else:
+                offset = 0.
             if p1 > p3:
-                x2 = p1 * (self.dimension + self.space)
-                x1 = p3 * (self.dimension + self.space)
+                x2 = p1 * (self.dimension + self.space) + (2 * offset)
+                x1 = p3 * (self.dimension + self.space) - (2 * offset)
                 line = Line2D([x1, x2], [y1, y1], **line_kwargs)
                 self.ax.add_line(line)
             elif p1 < p3:
-                x2 = p3 * (self.dimension + self.space) + self.dimension
-                x1 = p1 * (self.dimension + self.space) + self.dimension
+                x2 = p3 * (self.dimension + self.space) + self.dimension - (2 * offset)
+                x1 = p1 * (self.dimension + self.space) + self.dimension + (2 * offset)
                 line = Line2D([x1, x2], [y1, y1], **line_kwargs)
                 self.ax.add_line(line)
             if p2 > p3:
-                x2 = p2 * (self.dimension + self.space)
-                x1 = p3 * (self.dimension + self.space)
+                x2 = p2 * (self.dimension + self.space) + (2 * offset)
+                x1 = p3 * (self.dimension + self.space) - (2 * offset)
                 line = Line2D([x1, x2], [y2, y2], **line_kwargs)
                 self.ax.add_line(line)
             elif p2 < p3:
-                x2 = p3 * (self.dimension + self.space) + self.dimension
-                x1 = p2 * (self.dimension + self.space) + self.dimension
+                x2 = p3 * (self.dimension + self.space) + self.dimension - (2 * offset)
+                x1 = p2 * (self.dimension + self.space) + self.dimension + (2 * offset)
                 line = Line2D([x1, x2], [y2, y2], **line_kwargs)
                 self.ax.add_line(line)
 
